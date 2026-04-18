@@ -1,8 +1,0 @@
-{
-  "general": {
-    "approvalMode": "auto_edit"
-  },
-  "security": {
-    "enablePermanentToolApproval": true
-  }
-}
