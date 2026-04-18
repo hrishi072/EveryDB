@@ -75,6 +75,13 @@ cargo run --release
 
 ## Development
 
+### Git Hooks
+To ensure code quality, install the pre-push hook:
+```bash
+cp .githooks/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+
 ### Running Tests
 ```bash
 cargo test --workspace
