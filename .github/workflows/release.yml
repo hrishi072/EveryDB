@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: fedora:39
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          dnf install -y \
+            rust \
+            cargo \
+            qt6-qtbase-devel \
+            qt6-qtdeclarative-devel \
+            openssl-devel \
+            rpm-build \
+            cmake \
+            gcc-c++ \
+            libsecret-devel \
+            ImageMagick
+          cargo install cargo-generate-rpm
+          
+      - name: Create Placeholder Icon
+        run: |
+          mkdir -p assets/icons
+          if [ ! -f assets/icons/everydb.png ]; then
+            magick -size 256x256 xc:blue assets/icons/everydb.png
+          fi
+          
+      - name: Build Release
+        run: cargo build --release -p everydb
+        
+      - name: Generate RPM
+        run: |
+          cd crates/app
+          cargo generate-rpm
+          
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: everydb-rpm
+          path: crates/app/target/generate-rpm/*.rpm
+
+  release:
+    needs: build-rpm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download RPM
+        uses: actions/download-artifact@v4
+        with:
+          name: everydb-rpm
+          path: artifacts
+          
+      - name: Release Latest
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          name: "Latest Release"
+          body: "Automatic build from main branch."
+          draft: false
+          prerelease: false
+          files: artifacts/*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

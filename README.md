@@ -20,27 +20,27 @@ Install Rust via [rustup](https://rustup.rs/):
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### Qt 6 & Development Tools
+### Qt 6 & Development Tools (Fedora/openSUSE)
 EveryDB requires Qt 6.2+ and several system libraries.
 
-#### Ubuntu 22.04 / 24.04
+#### openSUSE Tumbleweed
 ```bash
-sudo apt update
-sudo apt install -y \
-    build-essential \
+sudo zypper install -y \
+    gcc-c++ \
     cmake \
-    qt6-base-dev \
-    qt6-declarative-dev \
-    qt6-tools-dev \
-    libgl1-mesa-dev \
-    libxkbcommon-dev \
-    libssl-dev \
-    libsecret-1-dev
+    qt6-base-devel \
+    qt6-declarative-devel \
+    qt6-qttools-devel \
+    Mesa-libGL-devel \
+    libxkbcommon-devel \
+    libopenssl-devel \
+    libsecret-devel \
+    ImageMagick
 ```
 
 #### Fedora
 ```bash
-sudo dnf install \
+sudo dnf install -y \
     gcc-c++ \
     cmake \
     qt6-qtbase-devel \
@@ -49,7 +49,8 @@ sudo dnf install \
     mesa-libGL-devel \
     libxkbcommon-devel \
     openssl-devel \
-    libsecret-devel
+    libsecret-devel \
+    ImageMagick
 ```
 
 ## Compilation
@@ -66,13 +67,6 @@ The binary will be located at `target/release/everydb`.
 cargo run --release
 ```
 
-## Project Structure
-
-- `crates/core`: Shared traits and types (database-agnostic).
-- `crates/drivers/*`: Database-specific implementations (Postgres, Mongo, Redis).
-- `crates/bridge`: `cxx-qt` bindings exposing Rust logic to QML.
-- `crates/app`: The main entry point and QML UI resources.
-
 ## Development
 
 ### Git Hooks
@@ -87,28 +81,20 @@ chmod +x .git/hooks/pre-push
 cargo test --workspace
 ```
 
-### Linting
-```bash
-cargo clippy --workspace -- -D warnings
-```
-
 ## Packaging
 
-EveryDB can be packaged as a `.deb` or `.rpm`.
+EveryDB is primarily packaged as an **RPM**.
 
-### Generate .deb (Ubuntu/Debian)
-Requires `cargo-deb`:
-```bash
-cargo install cargo-deb
-cargo deb -p everydb
-```
-
-### Generate .rpm (Fedora/RHEL)
+### Generate RPM locally
 Requires `cargo-generate-rpm`:
 ```bash
 cargo install cargo-generate-rpm
-cargo generate-rpm -p everydb
+cd crates/app && cargo generate-rpm
 ```
+
+## CI/CD & Releases
+
+Every push to the `main` branch automatically builds the RPM and updates the **Latest Release** on GitHub.
 
 ## License
 
