@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Qt 6
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qtdeclarative6-dev
+      - name: Build
+        run: cargo build --release
+      - name: Test
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy -- -D warnings

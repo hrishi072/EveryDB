@@ -1,0 +1,51 @@
+[package]
+name = "everydb"
+version = "0.1.0"
+edition = "2021"
+authors = ["EveryDB Contributors <hello@everydb.dev>"]
+license = "MIT"
+
+[dependencies]
+everydb-core = { path = "../core" }
+everydb-bridge = { path = "../bridge" }
+everydb-postgres = { path = "../drivers/postgres" }
+everydb-mongodb = { path = "../drivers/mongodb" }
+everydb-redis = { path = "../drivers/redis" }
+config = "0.13"
+keyring = "2.3"
+rusqlite = "0.30"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+cxx-qt = "0.6"
+cxx-qt-lib = "0.6"
+
+[dev-dependencies]
+testcontainers = "0.15"
+
+[package.metadata.deb]
+maintainer = "EveryDB Contributors <hello@everydb.dev>"
+copyright = "2024, EveryDB Contributors"
+license-file = ["LICENSE", "0"]
+extended-description = "EveryDB is a native, modular database explorer for PostgreSQL, MongoDB, Redis, and more."
+depends = "libqt6core6, libqt6qml6, libqt6quick6, libqt6quickcontrols2-6, libssl3, libsecret-1-0"
+section = "devel"
+priority = "optional"
+assets = [
+  ["target/release/everydb", "usr/bin/everydb", "755"],
+  ["assets/icons/everydb.png", "usr/share/icons/hicolor/256x256/apps/everydb.png", "644"],
+  ["crates/packaging/deb/everydb.desktop", "usr/share/applications/everydb.desktop", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/everydb", dest = "/usr/bin/everydb", mode = "0755" },
+  { source = "assets/icons/everydb.png", dest = "/usr/share/icons/hicolor/256x256/apps/everydb.png", mode = "0644" },
+  { source = "crates/packaging/deb/everydb.desktop", dest = "/usr/share/applications/everydb.desktop", mode = "0644" },
+]
+
+[package.metadata.generate-rpm.requires]
+qt6-qtbase = "*"
+qt6-qtdeclarative = "*"
+openssl-libs = "*"
+libsecret = "*"

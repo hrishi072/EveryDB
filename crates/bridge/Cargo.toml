@@ -1,0 +1,17 @@
+[package]
+name = "everydb-bridge"
+version = "0.1.0"
+edition = "2021"
+authors = ["EveryDB Contributors <hello@everydb.dev>"]
+license = "MIT"
+
+[dependencies]
+everydb-core = { path = "../core" }
+cxx = "1.0"
+cxx-qt = "0.6"
+cxx-qt-lib = "0.6"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+
+[build-dependencies]
+cxx-qt-build = "0.6"

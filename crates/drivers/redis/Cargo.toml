@@ -1,0 +1,16 @@
+[package]
+name = "everydb-redis"
+version = "0.1.0"
+edition = "2021"
+authors = ["EveryDB Contributors <hello@everydb.dev>"]
+license = "MIT"
+
+[dependencies]
+everydb-core = { path = "../../core" }
+redis = { version = "0.24", features = ["tokio-comp", "aio", "connection-manager", "cluster", "sentinel"] }
+deadpool-redis = "0.14"
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }

@@ -1,0 +1,21 @@
+[package]
+name = "everydb-postgres"
+version = "0.1.0"
+edition = "2021"
+authors = ["EveryDB Contributors <hello@everydb.dev>"]
+license = "MIT"
+
+[dependencies]
+everydb-core = { path = "../../core" }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "chrono", "uuid"] }
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = "1.33"
+serde_json = "1.0"
+
+[dev-dependencies]
+testcontainers = "0.15"
+tokio = { version = "1", features = ["full", "macros"] }
