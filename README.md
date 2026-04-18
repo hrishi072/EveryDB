@@ -58,9 +58,15 @@ sudo apt install -y \
 There are two ways to run EveryDB on your local machine:
 
 ### 1. Direct Execution (Development)
-You can build and run the application directly using Cargo without installing it:
+During development, you can run the application directly using Cargo. This will launch the GUI and load the QML files from your source tree.
+
+**Important:** You must run this from the project root.
+
 ```bash
-# Build and run immediately
+# Run in debug mode (faster compilation)
+cargo run
+
+# Run in release mode (faster execution)
 cargo run --release
 ```
 
