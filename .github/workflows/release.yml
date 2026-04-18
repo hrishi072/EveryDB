@@ -6,42 +6,55 @@ on:
   workflow_dispatch:
 
 jobs:
+  build-deb:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Qt 6 and Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-declarative-dev cmake libgl1-mesa-dev libxkbcommon-dev libssl-dev libsecret-1-dev imagemagick
+      - name: Create Placeholder Icon
+        run: |
+          mkdir -p assets/icons
+          if [ ! -f assets/icons/everydb.png ]; then
+            convert -size 256x256 xc:blue assets/icons/everydb.png
+          fi
+      - name: Build Release
+        run: cargo build --release -p everydb
+      - name: Generate DEB
+        run: |
+          cargo install cargo-deb
+          cargo deb -p everydb
+      - name: Upload DEB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: everydb-deb
+          path: target/debian/*.deb
+
   build-rpm:
     runs-on: ubuntu-latest
     container: fedora:39
     steps:
       - uses: actions/checkout@v4
-      
       - name: Install Dependencies
         run: |
-          dnf install -y \
-            rust \
-            cargo \
-            qt6-qtbase-devel \
-            qt6-qtdeclarative-devel \
-            openssl-devel \
-            rpm-build \
-            cmake \
-            gcc-c++ \
-            libsecret-devel \
-            ImageMagick
+          dnf install -y rust cargo qt6-qtbase-devel qt6-qtdeclarative-devel openssl-devel rpm-build cmake gcc-c++ libsecret-devel ImageMagick
           cargo install cargo-generate-rpm
-          
       - name: Create Placeholder Icon
         run: |
           mkdir -p assets/icons
           if [ ! -f assets/icons/everydb.png ]; then
             magick -size 256x256 xc:blue assets/icons/everydb.png
           fi
-          
       - name: Build Release
         run: cargo build --release -p everydb
-        
       - name: Generate RPM
         run: |
           cd crates/app
           cargo generate-rpm
-          
       - name: Upload RPM Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -49,17 +62,15 @@ jobs:
           path: crates/app/target/generate-rpm/*.rpm
 
   release:
-    needs: build-rpm
+    needs: [build-deb, build-rpm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download RPM
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: everydb-rpm
           path: artifacts
-          
       - name: Release Latest
         uses: softprops/action-gh-release@v1
         with:
@@ -68,6 +79,8 @@ jobs:
           body: "Automatic build from main branch."
           draft: false
           prerelease: false
-          files: artifacts/*.rpm
+          files: |
+            artifacts/everydb-deb/*.deb
+            artifacts/everydb-rpm/*.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

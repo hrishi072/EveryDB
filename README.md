@@ -20,8 +20,7 @@ Install Rust via [rustup](https://rustup.rs/):
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### Qt 6 & Development Tools (Fedora/openSUSE)
-EveryDB requires Qt 6.2+ and several system libraries.
+### Qt 6 & Development Tools
 
 #### openSUSE Tumbleweed
 ```bash
@@ -38,63 +37,58 @@ sudo zypper install -y \
     ImageMagick
 ```
 
-#### Fedora
+#### Ubuntu / Debian
 ```bash
-sudo dnf install -y \
-    gcc-c++ \
+sudo apt update
+sudo apt install -y \
+    build-essential \
     cmake \
-    qt6-qtbase-devel \
-    qt6-qtdeclarative-devel \
-    qt6-qttools-devel \
-    mesa-libGL-devel \
-    libxkbcommon-devel \
-    openssl-devel \
-    libsecret-devel \
-    ImageMagick
+    qt6-base-dev \
+    qt6-declarative-dev \
+    qt6-tools-dev \
+    libgl1-mesa-dev \
+    libxkbcommon-dev \
+    libssl-dev \
+    libsecret-1-dev \
+    imagemagick
 ```
 
-## Compilation
+## Running Locally
 
-### Build the project
+There are two ways to run EveryDB on your local machine:
+
+### 1. Direct Execution (Development)
+You can build and run the application directly using Cargo without installing it:
 ```bash
-cargo build --release
-```
-
-The binary will be located at `target/release/everydb`.
-
-### Running the application
-```bash
+# Build and run immediately
 cargo run --release
 ```
 
-## Development
+### 2. Local Installation (RPM/DEB)
+If you want to install it as a system application:
 
-### Git Hooks
-To ensure code quality, install the pre-push hook:
+#### For openSUSE / Fedora (RPM):
 ```bash
-cp .githooks/pre-push .git/hooks/pre-push
-chmod +x .git/hooks/pre-push
-```
-
-### Running Tests
-```bash
-cargo test --workspace
-```
-
-## Packaging
-
-EveryDB is primarily packaged as an **RPM**.
-
-### Generate RPM locally
-Requires `cargo-generate-rpm`:
-```bash
-cargo install cargo-generate-rpm
+# Generate the RPM
 cd crates/app && cargo generate-rpm
+# Install locally
+sudo zypper install ./target/generate-rpm/everydb-0.1.0-1.x86_64.rpm
+```
+
+#### For Ubuntu / Debian (DEB):
+```bash
+# Generate the DEB
+cargo deb -p everydb
+# Install locally
+sudo dpkg -i ./target/debian/everydb_0.1.0-1_amd64.deb
 ```
 
 ## CI/CD & Releases
 
-Every push to the `main` branch automatically builds the RPM and updates the **Latest Release** on GitHub.
+Every push to the `main` branch automatically:
+1.  Builds the project.
+2.  Generates both **.deb** and **.rpm** packages.
+3.  Updates the **Latest Release** on the GitHub repository with these packages.
 
 ## License
 
