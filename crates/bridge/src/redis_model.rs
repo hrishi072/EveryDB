@@ -1,17 +1,16 @@
 #[cxx_qt::bridge]
-mod redis_model {
-    extern "Rust" {
-        #[cxx_qt::qobject(qml_element = "RedisModel")]
+mod ffi {
+    extern "RustQt" {
+        #[qobject]
+        #[qml_element]
         type RedisModel = super::RedisModelRust;
     }
 
-    unsafe extern "C++" {
-        #[cxx_qt::notify]
+    unsafe extern "RustQt" {
+        #[qsignal]
         fn keyspace_changed(self: Pin<&mut RedisModel>);
-    }
 
-    extern "Rust" {
-        #[cxx_qt::invokable]
+        #[qinvokable]
         fn fetch_keys(self: Pin<&mut RedisModel>, pattern: String);
     }
 }
@@ -23,8 +22,8 @@ pub struct RedisModelRust {
     pub keys: Vec<String>,
 }
 
-impl RedisModelRust {
-    pub fn fetch_keys(self: Pin<&mut RedisModelRust>, _pattern: String) {
+impl ffi::RedisModel {
+    pub fn fetch_keys(self: Pin<&mut Self>, _pattern: String) {
         // Implement async redis scanning here
     }
 }

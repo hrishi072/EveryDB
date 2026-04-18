@@ -1,20 +1,19 @@
 #[cxx_qt::bridge]
-mod connection_model {
-    extern "Rust" {
-        #[cxx_qt::qobject(qml_element = "ConnectionModel")]
+mod ffi {
+    extern "RustQt" {
+        #[qobject]
+        #[qml_element]
         type ConnectionModel = super::ConnectionModelRust;
     }
 
-    unsafe extern "C++" {
-        #[cxx_qt::notify]
+    unsafe extern "RustQt" {
+        #[qsignal]
         fn connections_changed(self: Pin<&mut ConnectionModel>);
-    }
 
-    extern "Rust" {
-        #[cxx_qt::invokable]
+        #[qinvokable]
         fn load_connections(self: Pin<&mut ConnectionModel>);
 
-        #[cxx_qt::invokable]
+        #[qinvokable]
         fn add_connection(
             self: Pin<&mut ConnectionModel>,
             name: String,
@@ -29,19 +28,20 @@ mod connection_model {
 
 use everydb_core::connection::ConnectionConfig;
 use std::pin::Pin;
+use cxx_qt::CxxQtType;
 
 #[derive(Default)]
 pub struct ConnectionModelRust {
-    connections: Vec<ConnectionConfig>,
+    pub connections: Vec<ConnectionConfig>,
 }
 
-impl ConnectionModelRust {
-    pub fn load_connections(self: Pin<&mut ConnectionModelRust>) {
+impl ffi::ConnectionModel {
+    pub fn load_connections(self: Pin<&mut Self>) {
         // In a real app, this would load from ~/.config/everydb/connections.toml
     }
 
     pub fn add_connection(
-        mut self: Pin<&mut ConnectionModelRust>,
+        mut self: Pin<&mut Self>,
         name: String,
         driver: String,
         host: String,
@@ -61,15 +61,7 @@ impl ConnectionModelRust {
             extra_options: Default::default(),
         };
 
-        self.as_mut().connections_mut().push(config);
-        // Emitting signals or calling methods on C++ side can be done here
-    }
-
-    fn connections_mut<'a>(self: &'a mut Pin<&mut ConnectionModelRust>) -> &'a mut Vec<ConnectionConfig> {
-        // Workaround for accessing fields behind Pin
-        unsafe {
-            let unpinned = Pin::into_inner_unchecked(self.as_mut());
-            &mut unpinned.connections
-        }
+        self.as_mut().rust_mut().connections.push(config);
+        self.connections_changed();
     }
 }

@@ -12,10 +12,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-      - name: Install Qt 6 and cargo-deb
+      - name: Install Qt 6 and Dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y qt6-base-dev qtdeclarative6-dev
+          sudo apt-get update && sudo apt-get install -y \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            cmake \
+            g++ \
+            libsecret-1-dev \
+            libssl-dev \
+            libgl1-mesa-dev \
+            libxkbcommon-dev \
+            imagemagick
           cargo install cargo-deb
+      - name: Create Placeholder Icon
+        run: |
+          mkdir -p assets/icons
+          if [ ! -f assets/icons/everydb.png ]; then
+            # Create a simple blue 256x256 icon if missing
+            convert -size 256x256 xc:blue assets/icons/everydb.png
+          fi
       - name: Build Deb
         run: cargo deb -p everydb
       - name: Upload Artifact
@@ -31,8 +47,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Dependencies
         run: |
-          dnf install -y rust cargo qt6-qtbase-devel qt6-qtdeclarative-devel openssl-devel rpm-build
+          dnf install -y \
+            rust \
+            cargo \
+            qt6-qtbase-devel \
+            qt6-qtdeclarative-devel \
+            openssl-devel \
+            rpm-build \
+            cmake \
+            gcc-c++ \
+            libsecret-devel \
+            ImageMagick
           cargo install cargo-generate-rpm
+      - name: Create Placeholder Icon
+        run: |
+          mkdir -p assets/icons
+          if [ ! -f assets/icons/everydb.png ]; then
+            convert -size 256x256 xc:blue assets/icons/everydb.png
+          fi
       - name: Build
         run: cargo build --release -p everydb
       - name: Build RPM

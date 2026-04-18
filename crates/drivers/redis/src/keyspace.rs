@@ -16,10 +16,10 @@ pub async fn introspect(
     };
 
     // Use SCAN to avoid blocking
-    let mut iter: redis::AsyncIter<String> = redis::cmd("SCAN")
-        .arg(0)
-        .arg("COUNT")
-        .arg(100)
+    let mut cmd = redis::cmd("SCAN");
+    cmd.arg(0).arg("COUNT").arg(100);
+    
+    let mut iter: redis::AsyncIter<String> = cmd
         .iter_async(conn)
         .await
         .map_err(|e| CoreError::DatabaseError(e.to_string()))?;

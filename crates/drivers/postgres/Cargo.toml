@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 everydb-core = { path = "../../core" }
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "chrono", "uuid"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "chrono", "uuid", "rust_decimal"] }
 async-trait = "0.1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"

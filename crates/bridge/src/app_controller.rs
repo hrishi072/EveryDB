@@ -1,52 +1,65 @@
 #[cxx_qt::bridge]
-mod app_controller {
-    extern "Rust" {
-        #[cxx_qt::qobject]
+mod ffi {
+    extern "RustQt" {
+        #[qobject]
+        #[qml_element]
+        #[qproperty(String, current_driver_name)]
         type AppController = super::AppControllerRust;
     }
 
-    unsafe extern "C++" {
-        #[cxx_qt::notify]
-        fn current_driver_name_changed(self: Pin<&mut AppController>);
-    }
-
-    extern "Rust" {
-        #[cxx_qt::qproperty]
-        fn current_driver_name(self: &AppController) -> String;
-
-        #[cxx_qt::invokable]
+    unsafe extern "RustQt" {
+        #[qinvokable]
         fn connect_to_postgres(self: Pin<&mut AppController>, host: String, port: u16);
+
+        #[qinvokable]
+        fn register_driver(self: Pin<&mut AppController>, driver_type: String);
     }
 }
 
-use everydb_core::connection::ConnectionConfig;
-use everydb_core::driver::{DatabaseDriver, DriverRegistry};
+use everydb_core::driver::DriverRegistry;
+use everydb_core::driver::DatabaseDriver;
+use everydb_postgres::PostgresDriver;
+use everydb_mongodb::MongoDriver;
+use everydb_redis::RedisDriver;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+
+static REGISTRY: Lazy<Arc<Mutex<DriverRegistry>>> = Lazy::new(|| {
+    Arc::new(Mutex::new(DriverRegistry::new()))
+});
 
 pub struct AppControllerRust {
-    pub registry: Arc<DriverRegistry>,
+    pub current_driver_name: String,
     pub current_driver: Option<Arc<dyn DatabaseDriver>>,
 }
 
 impl Default for AppControllerRust {
     fn default() -> Self {
         Self {
-            registry: Arc::new(DriverRegistry::new()),
+            current_driver_name: "None".to_string(),
             current_driver: None,
         }
     }
 }
 
-impl AppControllerRust {
-    pub fn current_driver_name(&self) -> String {
-        self.current_driver
-            .as_ref()
-            .map(|d| d.name().to_string())
-            .unwrap_or_else(|| "None".to_string())
+impl ffi::AppController {
+    pub fn connect_to_postgres(self: Pin<&mut Self>, _host: String, _port: u16) {
+        // This is a stub for now.
     }
 
-    pub fn connect_to_postgres(self: Pin<&mut AppControllerRust>, host: String, port: u16) {
-        // This is a stub for now. In a real implementation, we'd use a background task.
+    pub fn register_driver(self: Pin<&mut Self>, driver_type: String) {
+        let mut registry = REGISTRY.lock().unwrap();
+        match driver_type.as_str() {
+            "postgres" => registry.register(Arc::new(PostgresDriver::new())),
+            "mongodb" => registry.register(Arc::new(MongoDriver::new())),
+            "redis" => registry.register(Arc::new(RedisDriver::new())),
+            _ => println!("Unknown driver type: {}", driver_type),
+        }
+    }
+    
+    pub fn global_registry() -> Arc<Mutex<DriverRegistry>> {
+        REGISTRY.clone()
     }
 }
