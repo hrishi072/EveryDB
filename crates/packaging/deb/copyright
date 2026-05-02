@@ -1,7 +1,0 @@
-Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: EveryDB
-Source: https://github.com/everydb/everydb
-
-Files: *
-Copyright: 2024 EveryDB Contributors
-License: MIT

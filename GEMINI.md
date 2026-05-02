@@ -1,676 +1,1092 @@
-# EveryDB — AI Agent Context File
-> This file is automatically loaded by Gemini CLI as persistent project context.
-> Every instruction below applies to the entire session unless explicitly overridden.
+# EveryDB — Universal Database IDE
+# GEMINI.md — Complete Production Specification
+# 
+# THIS IS A FULL DATAGRIP/DBEAVER CLONE FOR **EVERY** DATABASE
+# BUILT WITH RUST + TAURI — NATIVE PERFORMANCE, WEB TECHNOLOGIES UI
+# EVERY FEATURE MUST BE FULLY IMPLEMENTED — NO STUBS, NO TODOs, NO PLACEHOLDERS
+# THE STITCH UI IS IMMUTABLE LAW — MATCH IT PIXEL-PERFECT
 
 ---
 
-## Who You Are
+## ⚠️ CRITICAL: WHAT "FULLY IMPLEMENTED" MEANS
 
-You are a senior Rust systems engineer and Qt/QML specialist with deep expertise in:
-- Rust async programming (tokio, async-trait, futures)
-- Qt 6 / QML GUI development via `cxx-qt` FFI bindings
-- Database internals: PostgreSQL, MongoDB, Redis
-- Linux packaging: `.deb` and `.rpm`
-- Modular Cargo workspace architecture
+This is NOT a prototype. This is NOT a proof-of-concept. This is a **production-grade database IDE**.
 
-You write production-grade, well-documented, and thoroughly tested code.
-You never cut corners on error handling, modularity, or type safety.
+### ABSOLUTE REQUIREMENTS:
 
----
+1. **EVERY BUTTON WORKS**
+   - Click "Run" → query executes against real database
+   - Click "Export" → file is written to disk with correct format
+   - Click "Delete Row" → row is deleted from database after confirmation
+   - Click "Connect" → actual TCP connection established, SSL handshake performed
 
-## Project Identity
+2. **EVERY DIALOG SAVES DATA**
+   - Connection dialog → saves to `~/.config/everydb/connections.toml` with encrypted password
+   - Settings dialog → saves to `~/.config/everydb/preferences.toml`
+   - Filter builder → translates FilterExpr to real SQL/BSON/Redis commands
 
-| Field | Value |
-|---|---|
-| **Name** | EveryDB |
-| **Tagline** | A native, modular database explorer for every database |
-| **Binary** | `everydb` |
-| **Config dir** | `~/.config/everydb/` |
-| **Version** | 0.1.0 |
-| **License** | MIT |
+3. **EVERY VIEW DISPLAYS REAL DATA**
+   - Schema tree → shows actual tables/columns from live database
+   - Data grid → displays real rows fetched via SELECT/find()
+   - Query editor → syntax highlights based on actual SQL dialect
+   - Redis keyspace → shows actual keys from SCAN command
 
----
+4. **NO STUBS ANYWHERE**
+   ```rust
+   // ❌ FORBIDDEN:
+   #[tauri::command]
+   async fn execute_query(sql: String) -> Result<QueryResult, String> {
+       todo!("Implement query execution")
+   }
+   
+   // ✅ REQUIRED:
+   #[tauri::command]
+   async fn execute_query(
+       state: tauri::State<'_, AppState>,
+       connection_id: String,
+       sql: String,
+   ) -> Result<QueryResult, String> {
+       let driver = state.get_driver(&connection_id)?;
+       let result = driver.execute(QueryRequest::new(sql)).await
+           .map_err(|e| e.to_string())?;
+       Ok(result)
+   }
+   ```
 
-## Project Vision
+5. **INTEGRATION TESTS WITH REAL DATABASES**
+   - Every driver must have `testcontainers` tests
+   - Tests spin up actual Docker containers (postgres:15, mysql:8, mongo:7, redis:7)
+   - Tests execute real queries and verify real results
+   - `cargo test -p postgres` must pass with 100% of tests succeeding
 
-EveryDB is a native Linux desktop database management GUI — similar in ambition to DBeaver and JetBrains DataGrip — built entirely with **Rust** (backend) and **Qt 6 / QML** (frontend).
-
-**Key differentiators:**
-- Every supported database exposes its **full native feature set** — not just a common SQL subset
-- Adding a new database driver requires **zero changes** to core or UI code — only a new Cargo crate
-- Redis ships with first-class **queue and stream management** UI (not just a key browser)
-- All UI is **QML-based** (not Qt Widgets) for modern look, theming, and extensibility
-- Ships as native **`.deb` and `.rpm`** Linux packages
-
-**Initial databases:** PostgreSQL · MongoDB · Redis
-**Future databases:** MySQL/MariaDB · SQLite · Cassandra · ClickHouse · DynamoDB · and more
-
----
-
-## Technology Stack
-
-### Rust Backend
-| Crate | Purpose |
-|---|---|
-| `cxx-qt` | Type-safe Rust ↔ Qt/QML FFI bridge (QObject macros) |
-| `tokio` | Async runtime — all DB I/O is non-blocking |
-| `async-trait` | Trait-based async driver abstraction |
-| `sqlx` | PostgreSQL driver with compile-time checked queries |
-| `mongodb` | Official async MongoDB Rust driver |
-| `redis` | Async Redis client |
-| `deadpool-redis` | Redis connection pooling |
-| `serde` + `serde_json` | Universal serialization layer |
-| `thiserror` | Typed, structured error enums per driver |
-| `tracing` + `tracing-subscriber` | Structured async-aware logging |
-| `config` | Layered TOML-based app configuration |
-| `keyring` | OS keyring integration for password storage |
-| `rusqlite` | SQLite for query history persistence |
-| `testcontainers` | Spin up real Docker containers in integration tests |
-
-### Qt / QML Frontend
-| Component | Purpose |
-|---|---|
-| Qt 6.2+ LTS | GUI framework (minimum supported version) |
-| QML + Qt Quick Controls 2 | All UI views — no Qt Widgets anywhere |
-| Qt Charts | Redis metrics, MongoDB stats visualizations |
-| Qt TreeView | Schema explorer sidebar |
-| Qt TableView | Data grid (virtual/lazy loading) |
-| CMake | Qt/C++ build system, integrated with Cargo |
-
-### Packaging & CI
-| Tool | Purpose |
-|---|---|
-| `cargo-deb` | Generate `.deb` packages |
-| `cargo-generate-rpm` | Generate `.rpm` packages |
-| GitHub Actions | CI pipeline + release artifact publishing |
+**IF YOU CANNOT IMPLEMENT SOMETHING FULLY, STOP AND ASK BEFORE WRITING ANY CODE.**
 
 ---
 
-## Workspace Structure
+## 🏗️ TECHNOLOGY STACK
 
-Scaffold and maintain the following Cargo workspace layout. Every crate has a single, clear responsibility. **Never blur these boundaries.**
+### Backend (Rust)
+- **Tauri** 1.5+ — Native window + system integration
+- **tokio** — Async runtime for database I/O
+- **sqlx** — PostgreSQL, MySQL, SQLite drivers
+- **mongodb** — MongoDB driver
+- **redis** — Redis driver
+- **serde** + **serde_json** — Serialization
+- **thiserror** — Error handling
+- **tracing** — Structured logging
+- **keyring** — OS keyring for password storage
+- **ssh2** — SSH tunnel support
+- **testcontainers** — Integration testing
+
+### Frontend (Web Technologies)
+- **React** 18+ with **TypeScript** — UI framework (type safety + component model)
+- **TanStack Query** (React Query) — Data fetching + caching
+- **Zustand** — Global state management
+- **Tailwind CSS** — Styling (Stitch export already uses Tailwind!)
+- **Monaco Editor** — SQL syntax highlighting + autocomplete
+- **AG Grid** or **TanStack Table** — Virtual scrolling data grid
+- **Recharts** — Charts for EXPLAIN visualizer + dashboards
+- **Lucide React** — Icon library (Material Symbols alternative)
+
+**Alternative Frontend Options:**
+- **Svelte** + **SvelteKit** (smaller bundle, simpler syntax)
+- **Vue 3** + **Composition API** (if preferred)
+- **Vanilla TypeScript** (no framework, direct DOM manipulation)
+
+### Build & Package
+- **Tauri CLI** — Build + bundle
+- **Cargo** — Rust build system
+- **Vite** — Frontend dev server + build (fast HMR)
+- **GitHub Actions** — CI/CD
+
+### Cross-Platform Targets
+- **Linux** — .deb, .rpm, AppImage
+- **Windows** — .msi, .exe
+- **macOS** — .app, .dmg
+
+---
+
+## 🎨 THE STITCH UI IS IMMUTABLE LAW
+
+The folder `stitch_everydb_management_suite/` contains the **frozen visual specification**.
+
+**CRITICAL ADVANTAGE:** The Stitch export is **already HTML/CSS**! This is PERFECT for Tauri.
+
+### ABSOLUTE RULES:
+
+1. **EVERY COLOR** comes from the Stitch HTML exports
+   - The Stitch HTML already uses Tailwind classes like `bg-surface-container`, `text-on-surface`
+   - Extract these to a `tailwind.config.js` theme with exact hex values
+   - ❌ FORBIDDEN: Hardcoded colors in components
+   - ✅ REQUIRED: Use Tailwind theme colors
+
+2. **EVERY DIMENSION** matches the Stitch HTML exactly
+   - Row height: `h-[28px]` (from `.data-row` class in `visual_data_table/code.html`)
+   - Sidebar width: `w-[280px]` (from `main_application_shell_gui_first/code.html`)
+   - Border radius: `rounded` (4px) for buttons, `rounded-lg` (8px) for modals
+
+3. **EVERY FONT** is specified in Tailwind config
+   - `font-ui`: Inter for all UI labels, buttons, headers
+   - `font-data`: JetBrains Mono for ALL database values (IDs, SQL, JSON, timestamps)
+   - ❌ FORBIDDEN: Mixing fonts in one row
+   - ✅ REQUIRED: Database values use `font-data`, UI uses `font-ui`
+
+4. **EVERY COMPONENT STATE** matches Stitch
+   - Button hover: `hover:bg-[#1a5abf]` (exact hex from Stitch)
+   - Selected row: `bg-[rgba(47,129,247,0.15)] border-l-2 border-[#2F81F7]`
+   - Modified cell: `bg-[rgba(212,153,34,0.05)] border-l-2 border-[rgba(212,153,34,0.8)]`
+
+5. **USE THE STITCH HTML DIRECTLY**
+   - The Stitch HTML files can be used as templates
+   - Copy HTML structure, adapt Tailwind classes to your config
+   - Replace hardcoded data with React state/props
+   - Add event handlers (onClick, onChange, etc.)
+
+### EXAMPLE: Converting Stitch HTML to React Component
+
+**Stitch HTML (`visual_data_table/code.html`):**
+```html
+<div class="data-row h-[28px] hover:bg-surface-container-high">
+  <div class="cell font-mono text-on-surface">42</div>
+  <div class="cell font-mono text-on-surface">John Doe</div>
+</div>
+```
+
+**React Component:**
+```tsx
+interface DataRowProps {
+  row: { id: number; name: string };
+  selected: boolean;
+  onSelect: () => void;
+}
+
+const DataRow: React.FC<DataRowProps> = ({ row, selected, onSelect }) => (
+  <div 
+    className={cn(
+      "h-[28px] flex items-center hover:bg-elevated",
+      selected && "bg-[rgba(47,129,247,0.15)] border-l-2 border-accent-blue"
+    )}
+    onClick={onSelect}
+  >
+    <div className="px-4 font-data text-primary">{row.id}</div>
+    <div className="px-4 font-data text-primary">{row.name}</div>
+  </div>
+);
+```
+
+---
+
+## 📁 WORKSPACE STRUCTURE (Tauri)
 
 ```
 everydb/
-├── Cargo.toml                        # workspace root — lists all member crates
-├── CMakeLists.txt                    # Qt 6 build root, integrates with Cargo
-├── build.rs                          # top-level build orchestration
-├── GEMINI.md                         # this file — Gemini CLI context
+├── Cargo.toml                          # Workspace root
+├── GEMINI.md                           # This file
 ├── README.md
-├── assets/
-│   └── icons/
-│       └── everydb.png               # 256x256 app icon
+├── LICENSE
+├── .github/workflows/
+│   ├── ci.yml                          # Build + test
+│   └── release.yml                     # Build + package on tag
 │
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                    # build + test on every push
-│       └── package.yml               # build .deb and .rpm on tag push
+├── stitch_everydb_management_suite/    # READ-ONLY UI reference
+│   ├── everydb_core_1/DESIGN.md
+│   ├── everydb_core_2/DESIGN.md
+│   ├── main_application_shell_gui_first/code.html + screen.png
+│   ├── visual_data_table/code.html + screen.png
+│   ├── visual_filter_builder/code.html + screen.png
+│   └── ... (all other Stitch screens)
 │
-└── crates/
-    │
-    ├── app/                          # BINARY CRATE — entry point, wires all crates
-    │   ├── Cargo.toml
-    │   ├── src/
-    │   │   └── main.rs               # registers drivers, launches Qt app
-    │   └── qml/                      # all QML source files
-    │       ├── main.qml              # root window, tab manager, layout
-    │       ├── theme/
-    │       │   ├── Theme.qml         # color tokens, dark/light switching
-    │       │   └── Typography.qml    # font scales
-    │       ├── components/           # shared reusable QML components
-    │       │   ├── DataGrid.qml      # virtual-scrolling result table
-    │       │   ├── SyntaxEditor.qml  # code editor with syntax highlighting
-    │       │   ├── StatusBar.qml
-    │       │   └── ConnectionBadge.qml
-    │       └── views/
-    │           ├── ConnectionsView.qml    # connection manager sidebar
-    │           ├── SchemaExplorerView.qml # schema tree sidebar
-    │           ├── QueryEditorView.qml    # SQL / query editor + results
-    │           ├── DataGridView.qml       # editable result set view
-    │           ├── MongoDocumentView.qml  # BSON document viewer/editor
-    │           ├── MongoAggregateView.qml # aggregation pipeline builder
-    │           ├── RedisKeyspaceView.qml  # key browser + value inspector
-    │           ├── RedisQueueView.qml     # List/Stream queue management
-    │           └── RedisPubSubView.qml    # live pub/sub monitor
-    │
-    ├── core/                         # LIB CRATE — shared traits, types, errors only
-    │   ├── Cargo.toml                # NO database crate deps here
-    │   └── src/
-    │       ├── lib.rs
-    │       ├── driver.rs             # DatabaseDriver trait + DriverRegistry
-    │       ├── capabilities.rs       # DriverCapabilities flags struct
-    │       ├── connection.rs         # ConnectionConfig, ConnectionState
-    │       ├── query.rs              # QueryRequest, QueryResult, Row, Cell
-    │       ├── schema.rs             # SchemaNode, TableMeta, ColumnMeta, IndexMeta
-    │       ├── value.rs              # CoreValue enum — universal value type
-    │       └── error.rs              # CoreError enum
-    │
-    ├── drivers/
-    │   │
-    │   ├── postgres/                 # PostgreSQL driver crate
-    │   │   ├── Cargo.toml            # deps: sqlx, core
-    │   │   └── src/
-    │   │       ├── lib.rs
-    │   │       ├── driver.rs         # impl DatabaseDriver for PostgresDriver
-    │   │       ├── connection.rs     # connection pool management (sqlx PgPool)
-    │   │       ├── schema.rs         # pg_catalog introspection
-    │   │       ├── query.rs          # execute, stream, EXPLAIN ANALYZE
-    │   │       ├── transaction.rs    # BEGIN / COMMIT / ROLLBACK support
-    │   │       └── types.rs          # PgType <-> CoreValue mapping
-    │   │
-    │   ├── mongodb/                  # MongoDB driver crate
-    │   │   ├── Cargo.toml            # deps: mongodb, core
-    │   │   └── src/
-    │   │       ├── lib.rs
-    │   │       ├── driver.rs         # impl DatabaseDriver for MongoDriver
-    │   │       ├── connection.rs     # MongoClient management
-    │   │       ├── schema.rs         # collection sampling, index listing
-    │   │       ├── query.rs          # find, aggregate, insert, update, delete
-    │   │       ├── pipeline.rs       # aggregation pipeline stage types
-    │   │       └── types.rs          # Bson <-> CoreValue mapping
-    │   │
-    │   └── redis/                    # Redis driver crate
-    │       ├── Cargo.toml            # deps: redis, deadpool-redis, core
-    │       └── src/
-    │           ├── lib.rs
-    │           ├── driver.rs         # impl DatabaseDriver for RedisDriver
-    │           ├── connection.rs     # deadpool-redis pool setup
-    │           ├── keyspace.rs       # SCAN, TTL, TYPE, MEMORY USAGE
-    │           ├── values.rs         # String/Hash/List/Set/ZSet viewers
-    │           ├── queue.rs          # List-as-queue + Redis Streams (XADD/XREAD/XGROUP)
-    │           ├── pubsub.rs         # async SUBSCRIBE/PUBLISH
-    │           ├── server.rs         # INFO command, parsed metrics
-    │           └── types.rs          # Redis Value <-> CoreValue mapping
-    │
-    ├── bridge/                       # cxx-qt bridge — Rust models exposed to QML
-    │   ├── Cargo.toml                # deps: cxx-qt, core ONLY — never imports drivers
-    │   └── src/
-    │       ├── lib.rs
-    │       ├── connection_model.rs   # QAbstractListModel for saved connections
-    │       ├── schema_model.rs       # QAbstractItemModel (tree) for schema sidebar
-    │       ├── result_model.rs       # QAbstractTableModel for query result grid
-    │       ├── redis_model.rs        # Live-updating model for Redis keyspace
-    │       ├── query_controller.rs   # Q_OBJECT controller: runs queries async, emits signals
-    │       └── app_controller.rs     # Top-level app state, driver registry proxy
-    │
-    └── packaging/                    # Packaging metadata and scripts
-        ├── deb/
-        │   ├── everydb.desktop       # Linux desktop entry file
-        │   └── copyright
-        └── rpm/
-            └── everydb.spec          # Optional RPM spec reference
+├── src-tauri/                          # Rust backend (Tauri app)
+│   ├── Cargo.toml                      # Tauri dependencies
+│   ├── tauri.conf.json                 # Tauri config (window, bundle, etc.)
+│   ├── build.rs
+│   ├── icons/                          # App icons (PNG, ICO, ICNS)
+│   └── src/
+│       ├── main.rs                     # Tauri app entry point
+│       ├── commands/                   # Tauri command handlers
+│       │   ├── mod.rs
+│       │   ├── connection.rs           # connect, disconnect, test_connection
+│       │   ├── schema.rs               # introspect_schema, get_table_metadata
+│       │   ├── query.rs                # execute_query, cancel_query, get_history
+│       │   ├── data.rs                 # list_table_data, insert_row, update_row, delete_row
+│       │   ├── export.rs               # export_to_csv, export_to_json, export_to_xlsx
+│       │   ├── import.rs               # import_from_csv, import_from_excel
+│       │   └── settings.rs             # get_settings, save_settings
+│       ├── state.rs                    # AppState (driver registry, connections)
+│       └── lib.rs                      # Tauri setup, register commands
+│
+├── crates/
+│   ├── core/                           # Shared types, traits, errors
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── driver.rs               # DatabaseDriver trait
+│   │       ├── capabilities.rs         # DriverCapabilities flags
+│   │       ├── connection.rs           # ConnectionConfig, PoolConfig
+│   │       ├── query.rs                # QueryRequest, QueryResult
+│   │       ├── schema.rs               # SchemaNode, TableMetadata
+│   │       ├── value.rs                # CoreValue enum
+│   │       ├── filter.rs               # FilterExpr, SortSpec
+│   │       ├── error.rs                # CoreError
+│   │       └── user.rs                 # User, Role, Privilege
+│   │
+│   └── drivers/
+│       ├── postgres/                   # PostgreSQL driver
+│       ├── mysql/                      # MySQL driver
+│       ├── sqlite/                     # SQLite driver
+│       ├── mongodb/                    # MongoDB driver
+│       └── redis/                      # Redis driver
+│
+└── src/                                # Frontend (React + TypeScript)
+    ├── main.tsx                        # React entry point
+    ├── App.tsx                         # Root component
+    ├── vite-env.d.ts
+    ├── index.css                       # Tailwind imports
+    ├── lib/
+    │   ├── tauri.ts                    # Tauri command wrappers
+    │   ├── types.ts                    # TypeScript types (match Rust types)
+    │   └── utils.ts                    # Utility functions (cn, formatters)
+    ├── hooks/
+    │   ├── useConnections.ts           # TanStack Query for connections
+    │   ├── useSchema.ts                # TanStack Query for schema
+    │   ├── useTableData.ts             # TanStack Query for table data
+    │   └── useQuery.ts                 # TanStack Query for SQL queries
+    ├── store/
+    │   ├── app.ts                      # Zustand store (active connection, tabs, etc.)
+    │   └── settings.ts                 # Zustand store (preferences)
+    ├── components/
+    │   ├── ui/                         # Primitive components
+    │   │   ├── Badge.tsx
+    │   │   ├── Button.tsx
+    │   │   ├── ContextMenu.tsx
+    │   │   ├── TabBar.tsx
+    │   │   ├── StatusBar.tsx
+    │   │   └── ... (all primitives)
+    │   ├── layout/
+    │   │   ├── AppShell.tsx            # Three-panel layout
+    │   │   ├── Sidebar.tsx             # Left sidebar
+    │   │   ├── InspectorPanel.tsx      # Right panel
+    │   │   └── Toolbar.tsx             # Top toolbar
+    │   ├── grid/
+    │   │   ├── DataTable.tsx           # Virtual scrolling grid
+    │   │   ├── FilterBuilder.tsx       # Visual filter panel
+    │   │   └── CellRenderer.tsx        # Type-specific cell rendering
+    │   ├── editor/
+    │   │   ├── SqlEditor.tsx           # Monaco editor wrapper
+    │   │   ├── QueryResults.tsx        # Results tabs
+    │   │   └── ExplainView.tsx         # EXPLAIN plan tree
+    │   ├── schema/
+    │   │   ├── SchemaTree.tsx          # Lazy-loading tree
+    │   │   └── TableInspector.tsx      # Column/index/constraint tabs
+    │   ├── mongo/
+    │   │   ├── CollectionView.tsx      # Cards/table/JSON view
+    │   │   ├── DocumentEditor.tsx      # Tree editor
+    │   │   └── PipelineBuilder.tsx     # Aggregation pipeline
+    │   ├── redis/
+    │   │   ├── KeyspaceView.tsx        # Key list + value viewer
+    │   │   ├── ValueEditor.tsx         # Type-specific editors
+    │   │   ├── QueueView.tsx           # Queue manager
+    │   │   └── PubSubView.tsx          # Pub/Sub monitor
+    │   └── dialogs/
+    │       ├── ConnectionDialog.tsx    # New/edit connection
+    │       ├── SettingsDialog.tsx      # Settings panel
+    │       ├── ExportDialog.tsx        # Export data
+    │       └── ImportDialog.tsx        # Import data
+    ├── views/
+    │   ├── TableDataView.tsx           # Data grid + filters
+    │   ├── QueryEditorView.tsx         # SQL editor + results
+    │   ├── MongoCollectionView.tsx     # MongoDB collection
+    │   ├── RedisKeyspaceView.tsx       # Redis keyspace
+    │   └── UserManagementView.tsx      # User/role management
+    ├── tailwind.config.js              # Tailwind theme (Stitch colors)
+    ├── vite.config.ts                  # Vite config
+    ├── package.json
+    └── tsconfig.json
 ```
 
 ---
 
-## Core Abstraction — The Driver Trait
+## 🔌 TAURI ARCHITECTURE
 
-This is the **most important design decision** in the entire codebase.
-All database logic lives behind this trait. The UI and bridge layers are completely database-agnostic.
+### Rust Backend (src-tauri/)
 
-Define in `crates/core/src/driver.rs`:
+**Tauri Commands** replace cxx-qt signals. These are async Rust functions exposed to the frontend.
 
 ```rust
-use async_trait::async_trait;
+// src-tauri/src/commands/connection.rs
+
+use tauri::State;
+use crate::state::AppState;
+use everydb_core::{ConnectionConfig, CoreError};
+
+#[tauri::command]
+pub async fn connect_database(
+    state: State<'_, AppState>,
+    id: String,
+    config: ConnectionConfig,
+) -> Result<(), String> {
+    let driver = state.get_driver(&config.type_id)?;
+    driver.connect(&config, &Default::default()).await
+        .map_err(|e| e.to_string())?;
+    
+    state.add_connection(id.clone(), driver.clone());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn disconnect_database(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let driver = state.get_driver(&id)?;
+    driver.disconnect().await.map_err(|e| e.to_string())?;
+    state.remove_connection(&id);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn test_connection(
+    state: State<'_, AppState>,
+    config: ConnectionConfig,
+) -> Result<String, String> {
+    let driver = state.registry.get(&config.type_id)
+        .ok_or("Driver not found")?;
+    
+    driver.connect(&config, &Default::default()).await
+        .map_err(|e| e.to_string())?;
+    
+    let version = driver.server_version().await
+        .map_err(|e| e.to_string())?;
+    
+    driver.disconnect().await.map_err(|e| e.to_string())?;
+    Ok(version)
+}
+```
+
+**AppState** holds the driver registry and active connections:
+
+```rust
+// src-tauri/src/state.rs
+
 use std::sync::Arc;
-use crate::{
-    capabilities::DriverCapabilities,
-    connection::ConnectionConfig,
-    query::{QueryRequest, QueryResult},
-    schema::SchemaNode,
-    error::CoreError,
+use tokio::sync::RwLock;
+use std::collections::HashMap;
+use everydb_core::{DriverRegistry, DatabaseDriver};
+
+pub struct AppState {
+    pub registry: DriverRegistry,
+    pub connections: Arc<RwLock<HashMap<String, Arc<dyn DatabaseDriver>>>>,
+}
+
+impl AppState {
+    pub fn new(registry: DriverRegistry) -> Self {
+        Self {
+            registry,
+            connections: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+    
+    pub async fn add_connection(&self, id: String, driver: Arc<dyn DatabaseDriver>) {
+        self.connections.write().await.insert(id, driver);
+    }
+    
+    pub async fn get_driver(&self, id: &str) -> Result<Arc<dyn DatabaseDriver>, String> {
+        self.connections.read().await.get(id).cloned()
+            .ok_or_else(|| format!("Connection {} not found", id))
+    }
+}
+```
+
+**Main entry point:**
+
+```rust
+// src-tauri/src/main.rs
+
+use tauri::Manager;
+use everydb_core::DriverRegistry;
+use everydb_driver_postgres::PostgresDriver;
+use everydb_driver_mysql::MySQLDriver;
+use everydb_driver_mongodb::MongoDBDriver;
+use everydb_driver_redis::RedisDriver;
+use std::sync::Arc;
+
+mod state;
+mod commands;
+
+fn main() {
+    // Build driver registry
+    let mut registry = DriverRegistry::new();
+    registry.register(Arc::new(PostgresDriver::new()));
+    registry.register(Arc::new(MySQLDriver::new()));
+    registry.register(Arc::new(MongoDBDriver::new()));
+    registry.register(Arc::new(RedisDriver::new()));
+    
+    let state = state::AppState::new(registry);
+    
+    tauri::Builder::default()
+        .manage(state)
+        .invoke_handler(tauri::generate_handler![
+            commands::connection::connect_database,
+            commands::connection::disconnect_database,
+            commands::connection::test_connection,
+            commands::schema::introspect_schema,
+            commands::query::execute_query,
+            commands::data::list_table_data,
+            commands::data::insert_row,
+            commands::data::update_row,
+            commands::data::delete_row,
+            // ... all other commands
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+### Frontend (React + TypeScript)
+
+**Tauri Command Wrappers:**
+
+```typescript
+// src/lib/tauri.ts
+
+import { invoke } from '@tauri-apps/api/tauri';
+import type { ConnectionConfig, QueryResult, SchemaNode } from './types';
+
+export const tauriCommands = {
+  connection: {
+    connect: (id: string, config: ConnectionConfig) =>
+      invoke<void>('connect_database', { id, config }),
+    
+    disconnect: (id: string) =>
+      invoke<void>('disconnect_database', { id }),
+    
+    test: (config: ConnectionConfig) =>
+      invoke<string>('test_connection', { config }),
+  },
+  
+  schema: {
+    introspect: (connectionId: string) =>
+      invoke<SchemaNode[]>('introspect_schema', { connectionId }),
+    
+    getTableMetadata: (connectionId: string, schema: string, table: string) =>
+      invoke<TableMetadata>('get_table_metadata', { connectionId, schema, table }),
+  },
+  
+  query: {
+    execute: (connectionId: string, sql: string) =>
+      invoke<QueryResult>('execute_query', { connectionId, sql }),
+    
+    cancel: (connectionId: string, queryId: string) =>
+      invoke<void>('cancel_query', { connectionId, queryId }),
+  },
+  
+  data: {
+    list: (connectionId: string, schema: string, table: string, filters: FilterExpr[], limit: number, offset: number) =>
+      invoke<QueryResult>('list_table_data', { connectionId, schema, table, filters, limit, offset }),
+    
+    insert: (connectionId: string, schema: string, table: string, values: Record<string, CoreValue>) =>
+      invoke<CoreValue>('insert_row', { connectionId, schema, table, values }),
+    
+    update: (connectionId: string, schema: string, table: string, pkColumn: string, pkValue: CoreValue, changes: Record<string, CoreValue>) =>
+      invoke<number>('update_row', { connectionId, schema, table, pkColumn, pkValue, changes }),
+    
+    delete: (connectionId: string, schema: string, table: string, pkColumn: string, pkValue: CoreValue) =>
+      invoke<number>('delete_row', { connectionId, schema, table, pkColumn, pkValue }),
+  },
 };
+```
 
-/// The single extension point for all database integrations.
-/// Implement this trait in a new crate under `crates/drivers/` to add any database.
-#[async_trait]
-pub trait DatabaseDriver: Send + Sync + 'static {
-    /// Human-readable display name, e.g. "PostgreSQL 15"
-    fn name(&self) -> &'static str;
+**React Hooks with TanStack Query:**
 
-    /// Unique stable identifier used in config files, e.g. "postgres"
-    fn type_id(&self) -> &'static str;
+```typescript
+// src/hooks/useTableData.ts
 
-    /// Icon name from the assets bundle, e.g. "postgres-icon"
-    fn icon(&self) -> &'static str;
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { tauriCommands } from '@/lib/tauri';
+import type { FilterExpr, CoreValue } from '@/lib/types';
 
-    /// Test connectivity and establish the internal connection pool
-    async fn connect(&self, config: &ConnectionConfig) -> Result<(), CoreError>;
-
-    /// Gracefully disconnect and release all pool resources
-    async fn disconnect(&self) -> Result<(), CoreError>;
-
-    /// Returns true if currently connected
-    async fn is_connected(&self) -> bool;
-
-    /// Execute a query or command, return structured results
-    async fn execute(&self, req: QueryRequest) -> Result<QueryResult, CoreError>;
-
-    /// Return the full schema tree for the sidebar explorer
-    async fn introspect_schema(&self) -> Result<Vec<SchemaNode>, CoreError>;
-
-    /// Capabilities bitmask — the UI uses this to show/hide features
-    fn capabilities(&self) -> DriverCapabilities;
+export function useTableData(
+  connectionId: string,
+  schema: string,
+  table: string,
+  filters: FilterExpr[] = [],
+  limit: number = 500,
+  offset: number = 0,
+) {
+  return useQuery({
+    queryKey: ['tableData', connectionId, schema, table, filters, limit, offset],
+    queryFn: () => tauriCommands.data.list(connectionId, schema, table, filters, limit, offset),
+    enabled: !!connectionId && !!schema && !!table,
+  });
 }
 
-/// Central registry — the app crate registers all drivers here at startup.
-/// Everything else uses `Arc<dyn DatabaseDriver>` — never concrete types.
-pub struct DriverRegistry {
-    drivers: std::collections::HashMap<String, Arc<dyn DatabaseDriver>>,
-}
-
-impl DriverRegistry {
-    pub fn new() -> Self {
-        Self { drivers: Default::default() }
-    }
-
-    pub fn register(&mut self, driver: Arc<dyn DatabaseDriver>) {
-        self.drivers.insert(driver.type_id().to_string(), driver);
-    }
-
-    pub fn get(&self, type_id: &str) -> Option<Arc<dyn DatabaseDriver>> {
-        self.drivers.get(type_id).cloned()
-    }
-
-    pub fn all(&self) -> impl Iterator<Item = &Arc<dyn DatabaseDriver>> {
-        self.drivers.values()
-    }
+export function useInsertRow(connectionId: string, schema: string, table: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (values: Record<string, CoreValue>) =>
+      tauriCommands.data.insert(connectionId, schema, table, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tableData', connectionId, schema, table] });
+    },
+  });
 }
 ```
 
-Define `DriverCapabilities` in `crates/core/src/capabilities.rs`:
+**React Component Example:**
 
+```tsx
+// src/components/grid/DataTable.tsx
+
+import React from 'react';
+import { useTableData } from '@/hooks/useTableData';
+import { useAppStore } from '@/store/app';
+import { CellRenderer } from './CellRenderer';
+
+export const DataTable: React.FC = () => {
+  const activeConnection = useAppStore((s) => s.activeConnection);
+  const activeTable = useAppStore((s) => s.activeTable);
+  
+  const { data, isLoading, error } = useTableData(
+    activeConnection?.id ?? '',
+    activeTable?.schema ?? '',
+    activeTable?.name ?? '',
+  );
+  
+  if (isLoading) return <div className="flex items-center justify-center h-full">Loading...</div>;
+  if (error) return <div className="text-red-500">Error: {error.message}</div>;
+  if (!data) return null;
+  
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="h-[32px] flex bg-panel-bg border-b border-ghost">
+        {data.columns.map((col) => (
+          <div key={col.name} className="px-4 flex items-center font-ui text-sm text-primary">
+            {col.name} <span className="ml-2 font-data text-xs text-muted">{col.type}</span>
+          </div>
+        ))}
+      </div>
+      
+      {/* Rows */}
+      <div className="flex-1 overflow-auto">
+        {data.rows.map((row, idx) => (
+          <div
+            key={idx}
+            className="h-[28px] flex items-center hover:bg-elevated border-b border-subtle"
+          >
+            {data.columns.map((col, colIdx) => (
+              <CellRenderer
+                key={colIdx}
+                value={row[colIdx]}
+                type={col.type}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## 🎨 TAILWIND THEME (Exact Stitch Colors)
+
+**tailwind.config.js:**
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        // Surface Layers (from Stitch)
+        void: '#0D1117',
+        'panel-bg': '#161B22',
+        'surface-bg': '#1C2128',
+        elevated: '#21262D',
+        float: '#31353C',
+        deep: '#0A0E14',
+        
+        // Text
+        primary: '#E6EDF3',
+        secondary: '#8B949E',
+        muted: '#484F58',
+        accent: '#ACC7FF',
+        
+        // Accent Colors (semantic)
+        'accent-blue': '#2F81F7',
+        'accent-green': '#3FB950',
+        'accent-yellow': '#D29922',
+        'accent-red': '#F85149',
+        'accent-purple': '#A371F7',
+        'accent-orange': '#F0883E',
+        
+        // Database Brands
+        'pg-blue': '#336791',
+        'mysql-blue': '#00758F',
+        'sqlite-blue': '#003B57',
+        'mongo-green': '#47A248',
+        'redis-red': '#DC382D',
+        'oracle-red': '#F80000',
+        'mssql-red': '#CC2927',
+        
+        // Borders
+        ghost: 'rgba(48, 54, 61, 0.40)',
+        subtle: 'rgba(48, 54, 61, 0.20)',
+        solid: '#30363D',
+      },
+      
+      fontFamily: {
+        ui: ['Inter', 'sans-serif'],
+        data: ['JetBrains Mono', 'monospace'],
+      },
+      
+      fontSize: {
+        'ui': '13px',
+        'ui-bold': '13px',
+        'caps': '11px',
+        'data': '12.5px',
+        'data-sm': '12px',
+      },
+      
+      spacing: {
+        xs: '4px',
+        sm: '8px',
+        md: '16px',
+        lg: '24px',
+      },
+      
+      borderRadius: {
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
+        // NEVER larger than 8px
+      },
+      
+      transitionDuration: {
+        fast: '100ms',
+        normal: '150ms',
+      },
+    },
+  },
+  plugins: [],
+};
+```
+
+**index.css:**
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* STRICT RULE: All DB values use font-data, all UI uses font-ui */
+.db-value {
+  @apply font-data text-primary;
+}
+
+/* Row states from Stitch */
+.row-normal {
+  @apply bg-transparent;
+}
+
+.row-hover {
+  @apply bg-elevated;
+}
+
+.row-selected {
+  @apply bg-[rgba(47,129,247,0.15)] border-l-2 border-accent-blue;
+}
+
+.row-modified {
+  @apply bg-[rgba(212,153,34,0.05)] border-l-2 border-[rgba(212,153,34,0.8)];
+}
+
+.row-new {
+  @apply bg-[rgba(63,185,80,0.05)] border-l-2 border-[rgba(63,185,80,0.8)];
+}
+
+.row-error {
+  @apply bg-[rgba(248,81,73,0.05)] border-l-2 border-accent-red;
+}
+```
+
+---
+
+## 📋 FEATURE IMPLEMENTATION CHECKLIST
+
+This is identical to the Qt version — every feature must be fully implemented.
+
+### 1. Connection Management ✅
+- [ ] Save connections to `~/.config/everydb/connections.toml`
+- [ ] Encrypt passwords via OS keyring
+- [ ] SSH tunnel support (ssh2 crate)
+- [ ] SSL/TLS support
+- [ ] Connection pooling
+- [ ] Test connection (ping + version)
+- [ ] Import/export connections
+
+**Tauri Commands:**
 ```rust
-/// Flags that tell the UI which features are available for a given driver.
-/// Add new flags here as new database features are implemented — never use
-/// if-chains on driver type strings anywhere in UI or bridge code.
-#[derive(Debug, Clone, Default)]
-pub struct DriverCapabilities {
-    // Schema
-    pub has_structured_schema: bool,  // Tables, columns, constraints (PG: yes, Redis: no)
-    pub has_collections: bool,         // Document collections (Mongo: yes)
-    pub has_keyspace: bool,            // Flat key-value space (Redis: yes)
+#[tauri::command] async fn save_connection(config: ConnectionConfig) -> Result<(), String>
+#[tauri::command] async fn test_connection(config: ConnectionConfig) -> Result<String, String>
+#[tauri::command] async fn list_connections() -> Result<Vec<ConnectionConfig>, String>
+```
 
-    // Query
-    pub supports_sql: bool,            // SQL query interface
-    pub supports_explain: bool,        // EXPLAIN / query plan visualization
-    pub supports_transactions: bool,   // BEGIN/COMMIT/ROLLBACK
+### 2. Schema Browser ✅
+- [ ] Introspect full schema (databases → schemas → tables → columns)
+- [ ] Lazy loading (only load children when expanded)
+- [ ] Context menu per object type
+- [ ] Search across all objects
+- [ ] FK navigation
 
-    // Data editing
-    pub editable_results: bool,        // In-grid row editing and saving
+**Tauri Commands:**
+```rust
+#[tauri::command] async fn introspect_schema(connection_id: String) -> Result<Vec<SchemaNode>, String>
+#[tauri::command] async fn get_table_metadata(connection_id: String, schema: String, table: String) -> Result<TableMetadata, String>
+```
 
-    // Redis-specific
-    pub has_queues: bool,              // List-based queues + Redis Streams
-    pub has_pubsub: bool,              // PUBLISH/SUBSCRIBE channels
-    pub has_server_metrics: bool,      // INFO command metrics panel
+**React Component:**
+```tsx
+// src/components/schema/SchemaTree.tsx
+import { useQuery } from '@tanstack/react-query';
+import { tauriCommands } from '@/lib/tauri';
 
-    // MongoDB-specific
-    pub has_aggregation_pipeline: bool, // Pipeline builder UI
-    pub has_document_editor: bool,      // Raw BSON/JSON document editing
+export const SchemaTree = ({ connectionId }: { connectionId: string }) => {
+  const { data: schema } = useQuery({
+    queryKey: ['schema', connectionId],
+    queryFn: () => tauriCommands.schema.introspect(connectionId),
+  });
+  
+  return (
+    <div className="w-[280px] bg-panel-bg overflow-auto">
+      {/* Render tree recursively */}
+    </div>
+  );
+};
+```
+
+### 3. Data Grid ✅ MOST CRITICAL
+- [ ] Virtual scrolling (use TanStack Virtual or AG Grid)
+- [ ] All row states (hover, selected, modified, new, error)
+- [ ] Inline cell editing
+- [ ] Type-specific cell rendering
+- [ ] Pagination
+- [ ] Filters (visual builder)
+- [ ] Sorting (multi-column)
+- [ ] Export/import
+
+**React Component (Virtual Scrolling Example):**
+```tsx
+// src/components/grid/DataTable.tsx
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+export const DataTable = ({ data }: { data: QueryResult }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+  
+  const virtualizer = useVirtualizer({
+    count: data.rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 28, // row height from Stitch
+  });
+  
+  return (
+    <div ref={parentRef} className="h-full overflow-auto">
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => (
+          <div
+            key={virtualRow.index}
+            className="absolute top-0 left-0 w-full h-[28px]"
+            style={{ transform: `translateY(${virtualRow.start}px)` }}
+          >
+            {/* Render row */}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+### 4. SQL Query Editor ✅
+- [ ] Monaco Editor with SQL syntax highlighting
+- [ ] Auto-completion
+- [ ] Execute query (Ctrl+Enter)
+- [ ] Query history (stored in SQLite)
+- [ ] Bookmarks
+- [ ] Transactions (BEGIN/COMMIT/ROLLBACK)
+
+**React Component:**
+```tsx
+// src/components/editor/SqlEditor.tsx
+import Editor from '@monaco-editor/react';
+
+export const SqlEditor = () => {
+  const [sql, setSql] = useState('');
+  const { mutate: executeQuery } = useMutation({
+    mutationFn: (sql: string) => tauriCommands.query.execute(connectionId, sql),
+  });
+  
+  return (
+    <Editor
+      height="100%"
+      language="sql"
+      theme="vs-dark"
+      value={sql}
+      onChange={(value) => setSql(value ?? '')}
+      options={{
+        fontSize: 13,
+        fontFamily: 'JetBrains Mono',
+        minimap: { enabled: false },
+      }}
+    />
+  );
+};
+```
+
+### 5–12. All Other Features
+
+(MongoDB, Redis, EXPLAIN, ER Diagram, User Management, etc.)
+
+All implemented the same way:
+- Rust backend: Tauri commands
+- React frontend: Components with TanStack Query hooks
+- State: Zustand for global state
+- Styling: Tailwind classes from Stitch
+
+---
+
+## 🚀 BUILD & PACKAGE
+
+### Development
+
+```bash
+# Install frontend dependencies
+npm install
+
+# Run dev server (Vite HMR + Tauri)
+npm run tauri dev
+
+# This opens the app window with hot reload
+# Changes to Rust → restart
+# Changes to React → instant HMR
+```
+
+### Build
+
+```bash
+# Build for production
+npm run tauri build
+
+# Output:
+# - Linux: src-tauri/target/release/bundle/deb/everydb_1.0.0_amd64.deb
+# - Linux: src-tauri/target/release/bundle/rpm/everydb-1.0.0-1.x86_64.rpm
+# - Linux: src-tauri/target/release/bundle/appimage/everydb_1.0.0_amd64.AppImage
+# - Windows: src-tauri/target/release/bundle/msi/everydb_1.0.0_x64_en-US.msi
+# - macOS: src-tauri/target/release/bundle/dmg/everydb_1.0.0_x64.dmg
+```
+
+### Tauri Config (tauri.conf.json)
+
+```json
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "EveryDB",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "fs": {
+        "all": true,
+        "scope": ["$APPCONFIG/*", "$APPDATA/*", "$HOME/.config/everydb/*"]
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "identifier": "com.everydb.app",
+      "icon": ["icons/icon.png"],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "",
+      "category": "DeveloperTool",
+      "shortDescription": "Universal Database IDE",
+      "longDescription": "Production-grade database management for PostgreSQL, MySQL, MongoDB, Redis and more",
+      "deb": {
+        "depends": ["libssl3", "libgtk-3-0"]
+      },
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "10.13"
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "title": "EveryDB",
+        "width": 1440,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  }
 }
 ```
 
 ---
 
-## Feature Requirements Per Database
+## 📦 IMPLEMENTATION ROADMAP (24 Weeks)
 
-### PostgreSQL — Full Native Feature Set
+**Same as before, but with Tauri/React instead of Qt/QML:**
 
-**Connection:**
-- Host / port / username / password / database name
-- SSL mode: disable / require / verify-ca / verify-full
-- Connection string (URI) input as alternative
-- Connection timeout, pool size settings
-
-**Schema Explorer:**
-- Databases → Schemas → Tables / Views / Materialized Views / Functions / Sequences / Extensions
-- Per-table: columns (name, type, nullable, default), primary key, foreign keys, indexes, check constraints
-- Right-click context menu: generate SELECT, INSERT, UPDATE, DELETE templates
-
-**Query Editor:**
-- Syntax highlighting for SQL
-- Auto-complete: table names, column names, SQL keywords, schema paths
-- Multiple result tabs per query execution
-- Query history persisted to SQLite at `~/.config/everydb/history.db`
-- Format/prettify SQL button
-
-**Result Grid:**
-- Virtual scrolling — never load all rows into memory
-- Sortable columns, hide/show columns
-- Copy selection as CSV / JSON / SQL INSERT statements
-- Inline editing with dirty-row tracking for simple single-table queries
-- Row count and execution time in status bar
-
-**EXPLAIN ANALYZE Visualizer:**
-- Parse PostgreSQL JSON EXPLAIN output
-- Display node tree with cost, actual time, rows, loops annotations
-- Highlight the most expensive node
-
-**Transactions:**
-- BEGIN / COMMIT / ROLLBACK buttons in the toolbar
-- Visual indicator when inside an open transaction
-
----
-
-### MongoDB — Full Native Feature Set
-
-**Connection:**
-- MongoDB URI (including SRV `mongodb+srv://` format)
-- Auth mechanisms: SCRAM-SHA-256, SCRAM-SHA-1, X.509, LDAP
-- TLS/SSL options
-- Replica set / sharded cluster awareness
-
-**Schema Explorer:**
-- Databases → Collections
-- Per-collection: inferred field schema from document sampling, index list, collection stats
-- Right-click: drop collection, rename, create index
-
-**Query Interface (Native Mongo — not SQL):**
-- Filter input: JSON object `{ "field": { "$gt": 10 } }`
-- Projection, sort, limit/skip controls
-- Full CRUD: insert one / insert many / update / replace / delete
-
-**Aggregation Pipeline Builder:**
-- Add/remove/reorder stages visually
-- Per-stage: stage type selector (`$match`, `$group`, `$lookup`, `$project`, etc.) + JSON editor
-- Execute and preview output at each stage
-
-**Document Editor:**
-- View documents as formatted, syntax-highlighted JSON
-- Edit raw BSON fields inline
-- ObjectId, Date, Binary displayed with their BSON type
-
-**Index Management:**
-- List all indexes with key pattern, type, and options
-- Create new index: field selector, type (ascending/descending/text/geo), unique/sparse/TTL options
-- Drop index with confirmation
-
-**Stats Panel:**
-- Document count, storage size, average document size
-- Index count and total index size
-
----
-
-### Redis — Full Native Feature Set
-
-**Connection:**
-- Host / port / password / TLS / database index (0–15)
-- Sentinel mode: master name + sentinel addresses
-- Cluster mode: seed nodes
-
-**Keyspace Browser:**
-- SCAN-based paginated key listing (never KEYS * in production mode)
-- Filter by glob pattern and data type
-- Per-key: type badge, TTL countdown, memory usage (MEMORY USAGE)
-- Refresh button + auto-refresh interval toggle
-
-**Value Viewers/Editors — one specialized component per type:**
-| Type | View |
-|---|---|
-| String | Raw text or parsed JSON with formatting |
-| Hash | Field-value table with add/edit/delete row |
-| List | Ordered list with LPUSH/RPUSH/LINSERT/LREM controls |
-| Set | Member set with SADD/SREM, set operations (SUNION/SINTER/SDIFF) |
-| ZSet | Scored member table, ZADD/ZREM, range query by score or rank |
-| Stream | Message log table with consumer group info |
-
-**TTL Management:**
-- Display TTL as human-readable countdown
-- Set / remove TTL inline
-- PERSIST (make persistent) button
-
-**Queue Management (key differentiator):**
-
-*List-as-Queue pattern:*
-- Visual LPUSH (enqueue) form
-- RPOP / BRPOP (dequeue) with blocking timeout control
-- LRANGE viewer showing queue depth
-- LLEN counter
-
-*Redis Streams (XADD / XREAD / XGROUP):*
-- Stream message log table: ID, timestamp, fields
-- Consumer group management: XGROUP CREATE / SETID / DESTROY
-- Consumer list per group: XINFO CONSUMERS
-- Pending message inspector: XPENDING with idle time
-- XACK to acknowledge messages
-- XDEL to delete messages
-- Dead-letter queue: view messages that exceeded retry threshold
-
-**Pub/Sub Monitor:**
-- Subscribe to channels (exact name) or patterns (PSUBSCRIBE)
-- Live message feed: channel, payload, timestamp
-- PUBLISH form to send test messages
-
-**Server Info Panel:**
-- Parse INFO ALL output
-- Display as categorized sections: Server / Clients / Memory / Stats / Replication / CPU / Keyspace
-- Keyspace section as per-database table
-- Memory usage graph over time (sampled by background worker)
-
----
-
-## UI / UX Requirements
-
-### Application Layout
-
+### Phase 1 — Foundation (Weeks 1–4)
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Toolbar: [+ New Connection] [DB Selector] [Settings]   │
-├──────────────┬──────────────────────────┬───────────────┤
-│              │  Tab Bar                 │               │
-│  Left Panel  │ ┌────┐┌────┐┌────┐      │  Right Panel  │
-│              │ │Tab ││Tab ││Tab │      │               │
-│  Connections │ └────┘└────┘└────┘      │  Inspector    │
-│  tree        │                         │  / Details    │
-│              │  Center Panel           │               │
-│  Schema      │  (Query Editor,         │  Column info  │
-│  Explorer    │   Data Grid,            │  Index detail │
-│  tree        │   Specialized Views)    │  Key metadata │
-│              │                         │               │
-└──────────────┴──────────────────────────┴───────────────┘
-│  Status Bar: [Connection name] [DB name] [Row count] [Time] │
-└─────────────────────────────────────────────────────────┘
+Week 1: Workspace + Core
+├─ Cargo.toml workspace
+├─ crates/core complete (driver.rs, capabilities.rs, etc.)
+└─ Unit tests: cargo test -p core
+
+Week 2: PostgreSQL Driver
+├─ Full driver implementation
+└─ Integration tests: cargo test -p postgres
+
+Week 3: MySQL + SQLite Drivers
+Week 4: MongoDB + Redis Drivers
 ```
 
-### Theming
-- Dark and light themes switchable at runtime
-- Use Qt Material style as base with custom color overrides in `Theme.qml`
-- All colors, spacing, and font sizes come from the `Theme` singleton — never hardcoded
+### Phase 2 — Tauri Setup + Basic UI (Weeks 5–8)
+```
+Week 5: Tauri Setup
+├─ src-tauri/ structure
+├─ Tauri commands: connection, schema, query, data
+├─ AppState with driver registry
+└─ Test: tauri dev launches
 
-### Connection Manager
-- Saved connections stored in `~/.config/everydb/connections.toml`
-- Passwords stored in OS keyring via `keyring` crate (libsecret / gnome-keyring on Linux)
-- Connection groups (folders) for organization
-- "Test Connection" before saving
-- Import/export connections as JSON
+Week 6: Frontend Setup
+├─ React + TypeScript + Vite
+├─ Tailwind config with Stitch colors
+├─ TanStack Query setup
+├─ Zustand store
+└─ Tauri command wrappers
 
-### Query History
-- All executed queries stored in SQLite at `~/.config/everydb/history.db`
-- Searchable by text, connection, and time range
-- Re-execute from history with one click
+Week 7: Core Components
+├─ AppShell (three-panel layout)
+├─ Toolbar, StatusBar, Sidebar
+├─ Primitive components (Button, Badge, ContextMenu)
+└─ ConnectionDialog
 
----
-
-## Architecture Rules — Never Violate These
-
-1. **`core` has no database deps.** The `core` crate must never import `sqlx`, `mongodb`, `redis`, or any database library. It defines only traits, types, and errors.
-
-2. **`bridge` has no driver deps.** The `bridge` crate imports only `core`. It never imports `postgres`, `mongodb`, or `redis` crates directly.
-
-3. **`app` is the only wiring layer.** Only `crates/app/src/main.rs` imports driver crates and registers them into `DriverRegistry`. Everything downstream receives `Arc<dyn DatabaseDriver>`.
-
-4. **Never block the Qt event loop.** All DB calls run in `tokio::spawn`. Results are sent back to the Qt thread via cxx-qt signals (not shared mutable state).
-
-5. **Use `DriverCapabilities` to adapt UI.** If a UI element should only appear for certain databases, check the relevant capability flag. Never write `if driver.type_id() == "redis"` in bridge or QML code.
-
-6. **New database = new crate only.** Adding MySQL, SQLite, Cassandra, etc. in the future must require: (a) create `crates/drivers/mysql/`, (b) implement `DatabaseDriver`, (c) register in `main.rs`. Zero changes to `core`, `bridge`, or any other driver.
-
----
-
-## Code Quality Standards
-
-Apply these to every file without exception:
-
-```rust
-#![deny(clippy::all)]
-#![warn(clippy::pedantic)]
-#![forbid(unsafe_code)]   // except in cxx-qt bridge files where required
+Week 8: Schema Tree + Connection
+├─ SchemaTree component (lazy loading)
+├─ ConnectionCard
+├─ Test: connect to PG, schema tree loads
 ```
 
-- All public types and functions must have `///` doc comments
-- No `unwrap()` or `expect()` in library code — use `?` with proper error propagation
-- Use `thiserror::Error` for all error enums
-- Apply `#[tracing::instrument]` to all async public functions
-- All config structs: `#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]`
-- Integration tests in `tests/` using `testcontainers` to spin up real Docker containers
-- Unit tests in `src/` for pure logic
+### Phase 3 — Data Grid & Query Editor (Weeks 9–12)
+```
+Week 9–10: DataTable Component
+├─ Virtual scrolling (TanStack Virtual)
+├─ All row states
+├─ Inline editing
+├─ Cell renderers
 
----
-
-## Packaging Configuration
-
-### `.deb` — configure in `crates/app/Cargo.toml`
-
-```toml
-[package.metadata.deb]
-maintainer = "EveryDB Contributors <hello@everydb.dev>"
-copyright = "2024, EveryDB Contributors"
-license-file = ["LICENSE", "0"]
-extended-description = "EveryDB is a native, modular database explorer for PostgreSQL, MongoDB, Redis, and more."
-depends = "libqt6core6, libqt6qml6, libqt6quick6, libqt6quickcontrols2-6, libssl3, libsecret-1-0"
-section = "devel"
-priority = "optional"
-assets = [
-  ["target/release/everydb", "usr/bin/everydb", "755"],
-  ["assets/icons/everydb.png", "usr/share/icons/hicolor/256x256/apps/everydb.png", "644"],
-  ["crates/packaging/deb/everydb.desktop", "usr/share/applications/everydb.desktop", "644"],
-]
+Week 11: FilterBuilder + TableDataView
+Week 12: SqlEditor (Monaco) + QueryResults
 ```
 
-### `.rpm` — configure in `crates/app/Cargo.toml`
-
-```toml
-[package.metadata.generate-rpm]
-assets = [
-  { source = "target/release/everydb", dest = "/usr/bin/everydb", mode = "0755" },
-  { source = "assets/icons/everydb.png", dest = "/usr/share/icons/hicolor/256x256/apps/everydb.png", mode = "0644" },
-  { source = "crates/packaging/deb/everydb.desktop", dest = "/usr/share/applications/everydb.desktop", mode = "0644" },
-]
-
-[package.metadata.generate-rpm.requires]
-qt6-qtbase = "*"
-qt6-qtdeclarative = "*"
-openssl-libs = "*"
-libsecret = "*"
+### Phase 4 — MongoDB & Redis (Weeks 13–16)
+```
+Week 13: MongoDB Views
+Week 14: Redis Keyspace
+Week 15: Redis Advanced (Queue, Pub/Sub)
+Week 16: Testing & Polish
 ```
 
-### Desktop Entry — `crates/packaging/deb/everydb.desktop`
+### Phase 5 — Advanced Features (Weeks 17–20)
+```
+Week 17: EXPLAIN View + ER Diagram (Canvas API or library like React Flow)
+Week 18: Schema Diff + User Management
+Week 19: Import/Export + All Dialogs
+Week 20: Testing
+```
 
-```ini
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=EveryDB
-GenericName=Database Explorer
-Comment=Native modular database management for PostgreSQL, MongoDB, Redis and more
-Exec=everydb %u
-Icon=everydb
-StartupNotify=true
-Categories=Development;Database;
-Keywords=database;sql;postgres;mongodb;redis;query;
+### Phase 6 — Release (Weeks 21–24)
+```
+Week 21: Keyboard shortcuts + Packaging
+Week 22: Documentation
+Week 23: Testing
+Week 24: Release (cargo tauri build, publish to GitHub Releases)
 ```
 
 ---
 
-## GitHub Actions — CI Skeleton
+## ✅ ADVANTAGES OF TAURI OVER QT
 
-### `.github/workflows/ci.yml`
-- Trigger: push and pull_request on `main`
-- Runner: `ubuntu-22.04`
-- Steps: install Rust stable, install Qt 6 via `apt`, `cargo build --release`, `cargo test --workspace`, `cargo clippy -- -D warnings`
-
-### `.github/workflows/package.yml`
-- Trigger: tag push matching `v*`
-- Jobs:
-  - `build-deb`: ubuntu-22.04, `cargo deb -p everydb`, upload `.deb` artifact
-  - `build-rpm`: fedora:39 container, `cargo generate-rpm -p everydb`, upload `.rpm` artifact
-  - `release`: create GitHub Release, attach both artifacts
+1. **Stitch HTML directly usable** — No QML translation needed
+2. **Smaller bundle size** — ~3MB vs ~30MB for Qt
+3. **Web dev ecosystem** — NPM packages, React ecosystem
+4. **Hot reload** — Instant feedback during development
+5. **Cross-platform** — Windows/macOS/Linux from same codebase
+6. **No Qt licensing** — Pure open source (MIT/Apache)
+7. **TypeScript** — Type safety across frontend/backend boundary
+8. **Easier UI development** — HTML/CSS/React vs QML
 
 ---
 
-## Implementation Order
+## 🎯 CRITICAL REMINDERS
 
-Follow this sequence strictly. Do not skip ahead — each step depends on the previous.
+1. **EVERY FEATURE MUST BE FULLY IMPLEMENTED**
+   - No `todo!()` in production code
+   - Integration tests with real databases
+   - Manual testing: every button works
 
-```
-Step 1 — Workspace scaffold
-  ✦ Cargo.toml (workspace root with all member crates)
-  ✦ CMakeLists.txt (Qt 6 + cxx-qt integration)
-  ✦ Verify: `cargo build` and `cmake` both succeed with a cxx-qt hello-world bridge
+2. **STITCH UI IS LAW**
+   - Use Tailwind classes from Stitch HTML
+   - Extract colors to tailwind.config.js
+   - Match pixel-perfect
 
-Step 2 — crates/core
-  ✦ All traits, types, CoreValue, DriverCapabilities, CoreError
-  ✦ Full unit test coverage
-  ✦ No database imports
+3. **ARCHITECTURE RULES**
+   - `crates/core` has ZERO database dependencies
+   - Only `src-tauri/src/main.rs` imports driver crates
+   - All DB I/O is async (tokio)
+   - Tauri commands are the ONLY backend → frontend bridge
 
-Step 3 — crates/drivers/postgres
-  ✦ Implement DatabaseDriver fully
-  ✦ Integration tests via testcontainers (real PG Docker image)
-  ✦ EXPLAIN ANALYZE JSON parsing
+4. **CODE QUALITY**
+   ```rust
+   #![deny(clippy::all)]
+   #![warn(clippy::pedantic)]
+   #![forbid(unsafe_code)]
+   ```
 
-Step 4 — crates/drivers/mongodb
-  ✦ Implement DatabaseDriver fully
-  ✦ Aggregation pipeline types
-  ✦ Integration tests via testcontainers
-
-Step 5 — crates/drivers/redis
-  ✦ Implement DatabaseDriver fully
-  ✦ Queue and Streams support (XADD/XREAD/XGROUP/XACK)
-  ✦ Pub/Sub async handler
-  ✦ Integration tests via testcontainers
-
-Step 6 — crates/bridge
-  ✦ Qt models backed by Arc<dyn DatabaseDriver>
-  ✦ Async query execution → cxx-qt signals
-  ✦ No concrete driver imports
-
-Step 7 — crates/app QML UI
-  ✦ Three-panel layout in main.qml
-  ✦ All views per database (query, schema, data grid, Redis queue, etc.)
-  ✦ Theme system, dark/light switching
-
-Step 8 — Packaging & CI
-  ✦ cargo-deb metadata
-  ✦ cargo-generate-rpm metadata
-  ✦ Desktop entry file
-  ✦ GitHub Actions workflows (ci.yml + package.yml)
-```
+5. **TESTING**
+   ```bash
+   cargo test --all          # All unit tests
+   cargo test -p postgres    # Integration tests with testcontainers
+   npm run tauri dev         # Manual testing
+   ```
 
 ---
 
-## Hard Constraints
-
-- **No Tauri. No Electron. No web technologies.** This is a native Qt application.
-- **No Qt Widgets.** All UI must be QML / Qt Quick.
-- **No `unwrap()` in library code.** Ever.
-- **No blocking calls on the Qt thread.** Use `tokio::spawn` + cxx-qt signals.
-- **No cross-driver dependencies.** `drivers/postgres` must not import `drivers/redis`.
-- **No concrete driver types outside `crates/app/main.rs`.** Only `Arc<dyn DatabaseDriver>` everywhere else.
-
----
-
-## How To Interact With Me (Gemini)
-
-When I (Gemini) have questions about direction, I will ask before generating large amounts of code.
-
-When you give me a step like "do Step 3", I will:
-1. List what I'm about to create/modify
-2. Implement it fully with no placeholders (`todo!()` only in test stubs, never in library code)
-3. Show file paths for every file created
-4. Summarize what was done and what comes next
-
-I will always respect the workspace structure above. I will never create files outside the defined crate boundaries.
-
----
-
-*EveryDB — built with Rust, powered by Qt, open to every database.*
+*EveryDB — One IDE for Every Database.*
+*Native Performance. Web Technologies UI. Production-Grade.*
+*Built with Rust + Tauri. Designed with Stitch.*
